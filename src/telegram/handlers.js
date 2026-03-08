@@ -6,8 +6,13 @@
  * always sent to TELEGRAM_CHAT_ID, not back through ctx.reply.
  * (This is a single-user personal bot, so that's fine.)
  */
-import { runAgent, runMorningPlanning, runEveningQuestion, runEveningReviewWithResponse } from '../agent/agent.js';
+import { readFile, readdir, stat } from 'fs/promises';
+import { join, resolve } from 'path';
+import { runAgent, runMorningPlanning, runEveningQuestion, runEveningReviewWithResponse, runUserMessage } from '../agent/agent.js';
 import { markDone, markSkipped, consumePendingQuestion } from '../history.js';
+
+const DATA_DIR = process.env.DATA_DIR || resolve(process.cwd(), 'data');
+const LOGS_DIR = process.env.LOGS_DIR || resolve(process.cwd(), 'logs');
 
 /**
  * Reject any message not coming from the authorised chat ID.
@@ -78,6 +83,8 @@ export function registerHandlers(bot) {
       `/review — Evening review & summary\n` +
       `/projects — See your active projects\n` +
       `/add — Add something to your context\n` +
+      `/data — Read a data file (e.g. /data context.md)\n` +
+      `/logs — Tail today's log file\n` +
       `/help — Show this menu\n\n` +
       `*Or just talk to me freely:*\n` +
       `_"I just finished my run"_\n` +
@@ -96,6 +103,8 @@ export function registerHandlers(bot) {
       `/review — Review what got done today\n` +
       `/projects — List active projects and their stages\n` +
       `/add [text] — Add context, e.g. /add doctor appt Thursday 10am\n` +
+      `/data [file] — Read a data file, e.g. /data plan_today.json\n` +
+      `/logs — Tail today's log file (last 30 lines)\n` +
       `/help — This menu\n\n` +
       `Or just send any message — the agent handles it.`,
       { parse_mode: 'Markdown' }
@@ -145,6 +154,54 @@ export function registerHandlers(bot) {
     );
   });
 
+  // ── /data [filename] — read any file from the data directory ──────────
+  // Usage: /data context.md  /data plan_today.json  /data history.json
+  // No filename → lists all available files.
+  bot.command('data', async (ctx) => {
+    const filename = ctx.message.text.replace(/^\/data\s*/i, '').trim();
+
+    if (!filename) {
+      try {
+        const files = await readdir(DATA_DIR);
+        const lines = await Promise.all(files.map(async (f) => {
+          const s = await stat(join(DATA_DIR, f));
+          const kb = (s.size / 1024).toFixed(1);
+          return `📄 ${f} — ${kb} KB`;
+        }));
+        await ctx.reply(`*Data directory:*\n\n${lines.join('\n')}`, { parse_mode: 'Markdown' });
+      } catch (err) {
+        await ctx.reply(`⚠️ Could not read data directory: ${err.message}`);
+      }
+      return;
+    }
+
+    try {
+      const content = await readFile(join(DATA_DIR, filename), 'utf-8');
+      const MAX = 3800;
+      const truncated = content.length > MAX;
+      const display = truncated ? content.slice(0, MAX) + '\n…[truncated]' : content;
+      await ctx.reply(`*${filename}*\n\`\`\`\n${display}\n\`\`\``, { parse_mode: 'Markdown' });
+    } catch {
+      await ctx.reply(`⚠️ File not found: \`${filename}\`\n\nUse /data to list available files.`, { parse_mode: 'Markdown' });
+    }
+  });
+
+  // ── /logs — tail today's log file ──────────────────────────────────────
+  bot.command('logs', async (ctx) => {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD in UTC
+    const logFile = join(LOGS_DIR, `${today}.log`);
+
+    try {
+      const content = await readFile(logFile, 'utf-8');
+      const lines = content.trim().split('\n');
+      const tail = lines.slice(-30).join('\n');         // last 30 lines
+      const display = tail.length > 3800 ? tail.slice(-3800) : tail;
+      await ctx.reply(`*Logs — ${today} (last ${Math.min(lines.length, 30)} lines)*\n\`\`\`\n${display}\n\`\`\``, { parse_mode: 'Markdown' });
+    } catch {
+      await ctx.reply(`⚠️ No log file found for today (${today}).`);
+    }
+  });
+
   // ── Free text — check pending question first, then fall through to agent ─
   bot.on('text', async (ctx) => {
     const text = ctx.message.text;
@@ -159,13 +216,9 @@ export function registerHandlers(bot) {
       return;
     }
 
-    // Generic message — let the agent figure it out
+    // Generic message — agent with conversation history
     console.log(`[Telegram → Agent] "${text}"`);
-    await withAgent(ctx,
-      `The user sent this message: "${text}". ` +
-      `Understand what they need — it might be marking a task done, asking for advice, adding context, requesting a plan update, or just chatting. ` +
-      `Take appropriate action (read/write files if needed) and respond on Telegram.`
-    );
+    await withAgent(ctx, null, () => runUserMessage(text));
   });
 
   // ── Inline button callbacks ────────────────────────────────────────────
@@ -211,6 +264,8 @@ export async function registerBotCommands(bot) {
     { command: 'review',   description: 'Evening review & summary' },
     { command: 'projects', description: 'List active projects' },
     { command: 'add',      description: 'Add something to your context' },
+    { command: 'data',     description: 'Read a data file, e.g. /data context.md' },
+    { command: 'logs',     description: 'Tail today\'s log file' },
     { command: 'help',     description: 'Show all commands' },
   ]);
   console.log('[Telegram] Bot commands registered with Telegram ✓');
