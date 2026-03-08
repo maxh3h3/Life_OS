@@ -6,12 +6,24 @@
  *   WEBHOOK_URL absent → long polling (local dev)
  */
 import 'dotenv/config';
+import { mkdir } from 'fs/promises';
+import { resolve } from 'path';
 import { createBot } from './telegram/bot.js';
 import { registerHandlers, registerBotCommands } from './telegram/handlers.js';
 import { registerCronJobs } from './scheduler/cron.js';
 import { startWebhookServer } from './telegram/webhook.js';
 
+async function ensureDirs() {
+  const dataDir = process.env.DATA_DIR  || resolve(process.cwd(), 'data');
+  const logsDir = process.env.LOGS_DIR  || resolve(process.cwd(), 'logs');
+  await mkdir(dataDir, { recursive: true });
+  await mkdir(logsDir, { recursive: true });
+  console.log(`[LifeOS] Storage ready — data: ${dataDir} | logs: ${logsDir}`);
+}
+
 async function boot() {
+  await ensureDirs();
+
   console.log('');
   console.log('╔══════════════════════════════════════╗');
   console.log('║         AI LIFE OPERATING SYSTEM     ║');
