@@ -141,6 +141,13 @@ export async function clearConversation() {
   log.info('HISTORY', 'Conversation history cleared for new day');
 }
 
+/** Wipe today.md — called at 5am alongside clearConversation. */
+export async function clearDailyNote() {
+  const path = join(DATA_DIR, 'today.md');
+  await writeFile(path, '', 'utf-8');
+  log.info('HISTORY', 'today.md cleared for new day');
+}
+
 // ─── Reviews ──────────────────────────────────────────────────────────────────
 
 export async function saveReview(reviewText) {
