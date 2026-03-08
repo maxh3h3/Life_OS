@@ -1,0 +1,18 @@
+[
+  {
+    "id": "video_001",
+    "title": "How I Built My AI Life OS",
+    "type": "youtube_video",
+    "stage": "idea",
+    "notes": "Topic: showing the LifeOS system I built. Very meta, should perform well.",
+    "created": "2026-03-08"
+  },
+  {
+    "id": "fitness_001",
+    "title": "Run 5km without stopping",
+    "type": "fitness_goal",
+    "stage": "foundation",
+    "notes": "Currently at 3km. Building up slowly. Running 3x per week.",
+    "created": "2026-03-08"
+  }
+]

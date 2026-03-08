@@ -1,0 +1,18 @@
+[
+  { "time": "07:00", "task": "Wake up — no alarm snoozing. Drink a full glass of water immediately.", "duration_min": 10, "energy": "low", "project": null },
+  { "time": "07:10", "task": "Morning walk — 20–30 min outside. Fresh air, no podcast, just think.", "duration_min": 30, "energy": "low", "project": null },
+  { "time": "07:45", "task": "Slow breakfast — cook something proper, no scrolling.", "duration_min": 30, "energy": "low", "project": null },
+  { "time": "08:15", "task": "Journalling — 10 min. Reflect on this past week: what worked, what didn't, what you're proud of.", "duration_min": 10, "energy": "low", "project": null },
+  { "time": "08:30", "task": "Weekly review (mental only) — no screen needed. Ask: Am I on track? What's the #1 priority this week? Where am I wasting energy?", "duration_min": 20, "energy": "low", "project": null },
+  { "time": "09:00", "task": "Free time — read a book, watch something inspiring, or just rest. You earned it.", "duration_min": 120, "energy": "low", "project": null },
+  { "time": "11:00", "task": "Light stretching or yoga — 20 min. Body maintenance, not a workout.", "duration_min": 20, "energy": "low", "project": null },
+  { "time": "12:00", "task": "Cook & eat lunch — mindfully. No screens at the table.", "duration_min": 60, "energy": "low", "project": null },
+  { "time": "13:00", "task": "Recharge block — nap, walk, or creative hobby. Anything that fills you up, not drains you.", "duration_min": 120, "energy": "low", "project": null },
+  { "time": "15:00", "task": "Optional: Passive learning — watch 1 YouTube video about content creation or copywriting. No more than 1 hour. Stay curious, don't grind.", "duration_min": 60, "energy": "low", "project": null },
+  { "time": "16:00", "task": "Prep for the week — lay out gym kit, check calendar, set your Monday intention in your head.", "duration_min": 20, "energy": "low", "project": null },
+  { "time": "17:00", "task": "Socialise or call someone — friend, family, anyone. Human connection matters.", "duration_min": 60, "energy": "low", "project": null },
+  { "time": "18:30", "task": "Cook & eat dinner — keep it nutritious. Big week ahead, fuel yourself.", "duration_min": 60, "energy": "low", "project": null },
+  { "time": "19:30", "task": "Wind down — dim lights, no work talk, no doomscrolling. Book, podcast, or TV show.", "duration_min": 90, "energy": "low", "project": null },
+  { "time": "21:00", "task": "Screen off. Prep for sleep — tomorrow is Monday, and it matters.", "duration_min": 30, "energy": "low", "project": null },
+  { "time": "21:30", "task": "Lights out / sleep.", "duration_min": 0, "energy": "low", "project": null }
+]
