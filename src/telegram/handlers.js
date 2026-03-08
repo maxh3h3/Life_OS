@@ -80,6 +80,7 @@ export function registerHandlers(bot) {
       `I'm your autonomous AI life agent. I read your context, plan your days, and adapt as you go.\n\n` +
       `*Commands:*\n` +
       `/plan — Generate today's plan\n` +
+      `/today — Today's schedule split by past / upcoming\n` +
       `/review — Evening review & summary\n` +
       `/projects — See your active projects\n` +
       `/add — Add something to your context\n` +
@@ -100,6 +101,7 @@ export function registerHandlers(bot) {
     await ctx.reply(
       `*LifeOS Commands*\n\n` +
       `/plan — Plan today based on your context & projects\n` +
+      `/today — Today's schedule split by past / upcoming\n` +
       `/review — Review what got done today\n` +
       `/projects — List active projects and their stages\n` +
       `/add [text] — Add context, e.g. /add doctor appt Thursday 10am\n` +
@@ -152,6 +154,55 @@ export function registerHandlers(bot) {
       `Read the current context.md, figure out where this fits (upcoming events, notes, project ideas, constraints, etc.), ` +
       `update the file to include it naturally, then confirm to the user on Telegram what was added and where.`
     );
+  });
+
+  // ── /today — pretty-print today's plan split by past / upcoming ────────
+  bot.command('today', async (ctx) => {
+    try {
+      const raw  = await readFile(join(DATA_DIR, 'plan_today.json'), 'utf-8');
+      const plan = JSON.parse(raw);
+
+      if (!Array.isArray(plan) || plan.length === 0) {
+        await ctx.reply('No plan for today yet. Use /plan to generate one.');
+        return;
+      }
+
+      // Current time in configured timezone as "HH:MM"
+      const TZ      = process.env.TZ || 'UTC';
+      const nowTime = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+      const [nowH, nowM] = nowTime.split(':').map(Number);
+      const nowMinutes   = nowH * 60 + nowM;
+
+      const toMinutes = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+      const energy    = { high: '🔴', medium: '🟡', low: '🟢' };
+      const fmt       = (task) => {
+        const icon = energy[task.energy] || '⚪';
+        const dur  = task.duration_min ? ` _(${task.duration_min}m)_` : '';
+        return `${icon} \`${task.time}\` ${task.task}${dur}`;
+      };
+
+      const past     = plan.filter(t => t.time && toMinutes(t.time) <  nowMinutes);
+      const upcoming = plan.filter(t => t.time && toMinutes(t.time) >= nowMinutes);
+      const noTime   = plan.filter(t => !t.time);
+
+      const dateStr = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+
+      let msg = `📅 *${dateStr}*\n`;
+
+      if (past.length) {
+        msg += `\n*Done / past*\n` + past.map(fmt).join('\n');
+      }
+      if (upcoming.length) {
+        msg += `\n\n*Upcoming*\n` + upcoming.map(fmt).join('\n');
+      }
+      if (noTime.length) {
+        msg += `\n\n*Anytime*\n` + noTime.map(fmt).join('\n');
+      }
+
+      await ctx.reply(msg, { parse_mode: 'Markdown' });
+    } catch {
+      await ctx.reply('No plan found for today. Use /plan to generate one.');
+    }
   });
 
   // ── /data [filename] — read any file from the data directory ──────────
@@ -258,6 +309,7 @@ export function registerHandlers(bot) {
 export async function registerBotCommands(bot) {
   await bot.telegram.setMyCommands([
     { command: 'plan',     description: 'Generate today\'s plan' },
+    { command: 'today',    description: 'Show today\'s schedule split by past / upcoming' },
     { command: 'review',   description: 'Evening review & summary' },
     { command: 'projects', description: 'List active projects' },
     { command: 'add',      description: 'Add something to your context' },
