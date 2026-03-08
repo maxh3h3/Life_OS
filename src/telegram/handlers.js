@@ -176,11 +176,8 @@ export function registerHandlers(bot) {
     }
 
     try {
-      const content = await readFile(join(DATA_DIR, filename), 'utf-8');
-      const MAX = 3800;
-      const truncated = content.length > MAX;
-      const display = truncated ? content.slice(0, MAX) + '\n…[truncated]' : content;
-      await ctx.reply(`*${filename}*\n\`\`\`\n${display}\n\`\`\``, { parse_mode: 'Markdown' });
+      const filePath = join(DATA_DIR, filename);
+      await ctx.replyWithDocument({ source: filePath, filename });
     } catch {
       await ctx.reply(`⚠️ File not found: \`${filename}\`\n\nUse /data to list available files.`, { parse_mode: 'Markdown' });
     }
