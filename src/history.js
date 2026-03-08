@@ -108,6 +108,39 @@ export async function consumePendingQuestion() {
   return pending;
 }
 
+// ─── Conversation history ─────────────────────────────────────────────────────
+
+const CONVERSATION_WINDOW = 10; // max messages kept (user + assistant alternating)
+const CONVERSATION        = () => join(DATA_DIR, 'conversation.json');
+
+/**
+ * Load the rolling conversation history.
+ * Returns an array of { role, content } plain-text messages.
+ */
+export async function loadConversation() {
+  return readJSON(CONVERSATION(), []);
+}
+
+/**
+ * Append one user↔agent exchange and trim to the last CONVERSATION_WINDOW entries.
+ * @param {string} userText   - what the user sent
+ * @param {string} agentReply - the agent's final text response
+ */
+export async function appendConversationTurn(userText, agentReply) {
+  const history = await readJSON(CONVERSATION(), []);
+  history.push({ role: 'user',      content: userText  });
+  history.push({ role: 'assistant', content: agentReply });
+  const trimmed = history.slice(-CONVERSATION_WINDOW);
+  await writeJSON(CONVERSATION(), trimmed);
+  log.debug('HISTORY', `Conversation: ${trimmed.length} messages in window`);
+}
+
+/** Wipe the conversation — called at 5am so each day starts fresh. */
+export async function clearConversation() {
+  await writeJSON(CONVERSATION(), []);
+  log.info('HISTORY', 'Conversation history cleared for new day');
+}
+
 // ─── Reviews ──────────────────────────────────────────────────────────────────
 
 export async function saveReview(reviewText) {

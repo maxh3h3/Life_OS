@@ -3,11 +3,17 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 import { TOOL_DEFINITIONS, executeTool } from './tools.js';
+import { loadConversation, appendConversationTurn } from '../history.js';
 import log from '../logger.js';
 
 const client = new Anthropic();
 
-const SYSTEM_PROMPT = `You are LifeOS — an autonomous AI life commander for your user, Max.
+// Wrap system prompt as a cached content block — reused across every iteration
+// of the agentic loop and across runs within the 5-minute cache TTL (~90% token discount).
+const CACHED_SYSTEM = [
+  {
+    type:          'text',
+    text:          `You are LifeOS — an autonomous AI life commander for your user, Max.
 
 Your mission: turn Max's life context, goals, and energy into executable daily actions.
 
@@ -42,7 +48,10 @@ Write a JSON array of tasks:
   { "time": "09:00", "task": "Script video: How I Built My AI Life OS", "duration_min": 60, "energy": "high", "project": "video_001" }
 ]
 
-Always end by sending a Telegram message to Max with the plan or update.`;
+Always end by sending a Telegram message to Max with the plan or update.`,
+    cache_control: { type: 'ephemeral' },
+  },
+];
 
 export async function runAgent(trigger, history = []) {
   const messages  = [...history, { role: 'user', content: trigger }];
@@ -61,8 +70,11 @@ export async function runAgent(trigger, history = []) {
       const response = await client.messages.create({
         model:      process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
         max_tokens: 4096,
-        system:     SYSTEM_PROMPT,
-        tools:      TOOL_DEFINITIONS,
+        system:     CACHED_SYSTEM,
+        tools:      [
+          ...TOOL_DEFINITIONS.slice(0, -1),
+          { ...TOOL_DEFINITIONS.at(-1), cache_control: { type: 'ephemeral' } },
+        ],
         messages,
       });
 
@@ -150,7 +162,20 @@ export async function runEveningReviewWithResponse(userReply) {
 
 export async function runUserMessage(userMessage) {
   log.info('TELEGRAM', `Incoming message → agent: "${userMessage.slice(0, 80)}"`);
-  return runAgent(
-    `The user just sent this message via Telegram: "${userMessage}". Process it, update any relevant files (mark tasks done, update context if new info), and respond on Telegram.`
-  );
+
+  const history = await loadConversation();
+  const trigger = `The user just sent this message via Telegram: "${userMessage}". Process it, update any relevant files (mark tasks done, update context if new info), and respond on Telegram.`;
+
+  const messages = await runAgent(trigger, history);
+
+  // Extract the agent's final text reply to save into conversation history
+  const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+  const replyText = (lastAssistant?.content ?? [])
+    .filter(b => b.type === 'text')
+    .map(b => b.text)
+    .join(' ')
+    .trim();
+
+  await appendConversationTurn(userMessage, replyText);
+  return messages;
 }

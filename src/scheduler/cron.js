@@ -9,7 +9,7 @@ import { readFile, writeFile } from 'fs/promises';
 import { resolve, join } from 'path';
 import { format } from 'date-fns';
 import { runAgent, runMorningPlanning, runEveningQuestion } from '../agent/agent.js';
-import { addCheckin, wasAlreadyAsked, setPendingQuestion } from '../history.js';
+import { addCheckin, wasAlreadyAsked, setPendingQuestion, clearConversation } from '../history.js';
 import { sendMessage } from '../telegram/bot.js';
 import log from '../logger.js';
 
@@ -113,7 +113,10 @@ export function registerCronJobs() {
   // ── 05:00 — Morning planning (agent) ──────────────────────────────────
   jobs.push(cron.schedule('0 5 * * *', async () => {
     console.log('[Cron] 05:00 — Morning planning...');
-    try { await runMorningPlanning(); }
+    try {
+      await clearConversation();
+      await runMorningPlanning();
+    }
     catch (err) { console.error('[Cron] Morning planning failed:', err.message); }
   }, { timezone: TZ }));
 
