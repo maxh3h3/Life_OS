@@ -1,49 +1,48 @@
 # Life Context — Max
 
 ## Who I am
-28 years old, London. Freelance developer by day, building a YouTube channel on the side.
-I value discipline, growth, and freedom. I want to replace active income with passive income.
+22 years old. Living in Nanjing, China (Shanghai area).
+Core mission: become the most disciplined person alive.
+I value discipline, growth, and relentless self-improvement.
 
 ## Skills
-- Programming: advanced (5 years experience, mainly web/Node.js)
-- Video editing: intermediate (Premiere Pro)
-- Fitness: intermediate (gym 3x week)
-- Copywriting: beginner (actively learning)
+- To be expanded as Max shares more. Update this section.
 
 ## Current situation
-- Earning ~£1200/month from freelance clients (target: £1500)
-- YouTube channel just starting — 0 subscribers, 0 videos published yet
-- Working from home office. Have: laptop, camera, microphone, gym membership.
-- Monthly budget for tools/software: ~£500
+- Based in Nanjing, China
+- Age: 23
+- Building discipline from the ground up — this is Priority #1
 
 ## Goals
+### Core Identity Goal
+- Become the most disciplined person ever — in body, mind, habits, and output.
+
 ### Short term (next 1-2 months)
-- Launch the YouTube channel — publish first 3 videos
-- Run 5km without stopping (currently struggling at 3km)
+- Build unbreakable morning and evening routines
+- Establish daily non-negotiable habits (sleep, movement, deep work, no-phone blocks)
+- Define and launch a key personal project
 
 ### Medium term (3-6 months)
-- Reach 1000 YouTube subscribers
-- Generate £2000/month from content (sponsorships + AdSense)
+- Have a visible, trackable streak of disciplined days
+- Be executing at a level most 22-year-olds cannot match
 
 ### Long term (1-2 years)
-- Build a 6-figure online business
-- Achieve peak physical condition
+- Be known (to himself and others) as someone with iron discipline
+- Turn discipline into results: fitness, skills, income, output
 
 ## Energy pattern
-- Morning (8am–12pm): High focus. Best for deep work — scripting, coding, learning.
-- Afternoon (1pm–5pm): Medium. Good for filming, editing, client calls.
-- Evening (6pm–9pm): Low. Light tasks — replying to comments, admin, planning.
-- After 9pm: Wind down. No screens ideally.
+- To be confirmed by Max. Default assumption:
+  - Morning: High focus — best for deep work, learning, hard tasks
+  - Afternoon: Medium — execution tasks, projects
+  - Evening: Low — review, light reading, planning next day
 
 ## Fixed weekly schedule
-- Monday, Wednesday, Friday evenings (7pm–8pm): Gym
-- Sunday: Rest day — no work tasks
-- Wake up: 7am. Sleep: 11pm.
+- To be confirmed by Max.
+- Sunday: Noted as current day (2026-03-08)
 
-## Work hours
-- Client work: 9am–1pm (mornings)
-- Personal projects: 2pm–6pm (afternoons)
+## Wake up / Sleep targets
+- To be defined with Max
 
-## This week / upcoming
-- Nothing specific flagged yet. Update this section as things come up.
-  Example: "Doctor appointment Tuesday 10am", "Client call Thursday 3pm"
+## Notes
+- Max is starting fresh. Help him build systems, not just tasks.
+- Call him out when he slacks. Be direct. He wants discipline, not comfort.

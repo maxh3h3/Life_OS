@@ -6,7 +6,18 @@
  * always sent to TELEGRAM_CHAT_ID, not back through ctx.reply.
  * (This is a single-user personal bot, so that's fine.)
  */
-import { runAgent, runMorningPlanning, runEveningReview } from '../agent/agent.js';
+import { runAgent, runMorningPlanning, runEveningQuestion, runEveningReviewWithResponse } from '../agent/agent.js';
+import { markDone, markSkipped, consumePendingQuestion } from '../history.js';
+
+/**
+ * Reject any message not coming from the authorised chat ID.
+ * This is a personal bot — no one else should be able to trigger the agent.
+ */
+function isAuthorised(ctx) {
+  const allowed = process.env.TELEGRAM_CHAT_ID;
+  const incoming = String(ctx.chat?.id || ctx.callbackQuery?.message?.chat?.id || '');
+  return incoming === allowed;
+}
 
 /**
  * Keeps the "typing…" indicator alive while the agent is working.
@@ -25,10 +36,18 @@ function startTypingIndicator(ctx) {
  * Wrap any agent call: show typing indicator, run agent, stop indicator.
  * On error, reply directly via ctx so the user isn't left hanging.
  */
-async function withAgent(ctx, triggerMessage) {
+/**
+ * Run an agent call with typing indicator.
+ * Pass either a trigger string OR a pre-built async function.
+ */
+async function withAgent(ctx, triggerMessage, agentFn = null) {
   const stopTyping = startTypingIndicator(ctx);
   try {
-    await runAgent(triggerMessage);
+    if (agentFn) {
+      await agentFn();
+    } else {
+      await runAgent(triggerMessage);
+    }
   } catch (err) {
     console.error('[Handler] Agent error:', err.message);
     await ctx.reply(`⚠️ Agent error: ${err.message}`);
@@ -38,6 +57,16 @@ async function withAgent(ctx, triggerMessage) {
 }
 
 export function registerHandlers(bot) {
+
+  // ── Auth middleware — runs before every handler ─────────────────────────
+  // Silently drops any update not from the authorised chat ID.
+  bot.use(async (ctx, next) => {
+    if (!isAuthorised(ctx)) {
+      console.warn(`[Auth] Blocked message from chat_id: ${ctx.chat?.id}`);
+      return; // do not call next() — handler chain stops here
+    }
+    return next();
+  });
 
   // ── /start ─────────────────────────────────────────────────────────────
   bot.command('start', async (ctx) => {
@@ -82,9 +111,11 @@ export function registerHandlers(bot) {
 
   // ── /review ────────────────────────────────────────────────────────────
   bot.command('review', async (ctx) => {
-    await withAgent(ctx,
-      "It's end of day. Read today's plan and history. Summarize what got done, what didn't, note any patterns, and send me a concise review on Telegram."
-    );
+    const { setPendingQuestion } = await import('../history.js');
+    await withAgent(ctx, null, async () => {
+      await runEveningQuestion();
+      await setPendingQuestion('evening_review');
+    });
   });
 
   // ── /projects ──────────────────────────────────────────────────────────
@@ -114,11 +145,21 @@ export function registerHandlers(bot) {
     );
   });
 
-  // ── Free text — forward everything to the agent ────────────────────────
+  // ── Free text — check pending question first, then fall through to agent ─
   bot.on('text', async (ctx) => {
     const text = ctx.message.text;
-    if (text.startsWith('/')) return; // already handled by commands above
+    if (text.startsWith('/')) return;
 
+    // Check if this reply is answering a pending question
+    const pending = await consumePendingQuestion();
+
+    if (pending?.type === 'evening_review') {
+      console.log(`[Telegram → Agent 2] Evening review response: "${text}"`);
+      await withAgent(ctx, null, () => runEveningReviewWithResponse(text));
+      return;
+    }
+
+    // Generic message — let the agent figure it out
     console.log(`[Telegram → Agent] "${text}"`);
     await withAgent(ctx,
       `The user sent this message: "${text}". ` +
@@ -128,14 +169,32 @@ export function registerHandlers(bot) {
   });
 
   // ── Inline button callbacks ────────────────────────────────────────────
+  // Handles task check-in responses: "done::08:00::Morning run" or "skip::08:00::Morning run"
+  // Also handles any other generic button presses.
   bot.on('callback_query', async (ctx) => {
     const data = ctx.callbackQuery.data;
     await ctx.answerCbQuery('Got it ✓');
 
     console.log(`[Telegram → Agent] Button: "${data}"`);
+
+    // Parse structured check-in responses — no agent needed, just write to file
+    if (data.startsWith('done::') || data.startsWith('skip::')) {
+      const [action, time, ...taskParts] = data.split('::');
+      const taskName = taskParts.join('::');
+
+      if (action === 'done') {
+        await markDone(taskName, time);
+        await ctx.reply(`✅ Logged: *${taskName}*`, { parse_mode: 'Markdown' });
+      } else {
+        await markSkipped(taskName, time);
+        await ctx.reply(`❌ Noted: *${taskName}* skipped`, { parse_mode: 'Markdown' });
+      }
+      return;
+    }
+
+    // Generic button press — let the agent figure it out
     await withAgent(ctx,
-      `The user pressed a button with value: "${data}". Process this action appropriately — ` +
-      `mark tasks done, update files if needed, and confirm back on Telegram.`
+      `The user pressed a button with value: "${data}". Process this appropriately and respond on Telegram.`
     );
   });
 

@@ -1,0 +1,122 @@
+/**
+ * History Service — direct read/write to history.json.
+ * No agent involved. Just file I/O.
+ */
+import { readFile, writeFile } from 'fs/promises';
+import { join, resolve } from 'path';
+import { format } from 'date-fns';
+import log from './logger.js';
+
+const DATA_DIR        = process.env.DATA_DIR || resolve(process.cwd(), 'data');
+const HISTORY         = () => join(DATA_DIR, 'history.json');
+const CHECKINS        = () => join(DATA_DIR, 'checkins.json');
+const REVIEWS         = () => join(DATA_DIR, 'reviews.json');
+const PENDING         = () => join(DATA_DIR, 'pending_question.json');
+
+async function readJSON(path, fallback = []) {
+  try {
+    return JSON.parse(await readFile(path, 'utf-8'));
+  } catch {
+    return fallback;
+  }
+}
+
+async function writeJSON(path, data) {
+  await writeFile(path, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+export async function markDone(taskName, scheduledTime) {
+  const history = await readJSON(HISTORY());
+  history.push({
+    task:          taskName,
+    scheduled_at:  scheduledTime,
+    completed_at:  new Date().toISOString(),
+    date:          format(new Date(), 'yyyy-MM-dd'),
+    status:        'done',
+  });
+  await writeJSON(HISTORY(), history);
+  log.info('HISTORY', `Done: "${taskName}"`);
+}
+
+export async function markSkipped(taskName, scheduledTime) {
+  const history = await readJSON(HISTORY());
+  history.push({
+    task:         taskName,
+    scheduled_at: scheduledTime,
+    date:         format(new Date(), 'yyyy-MM-dd'),
+    status:       'skipped',
+  });
+  await writeJSON(HISTORY(), history);
+  log.info('HISTORY', `Skipped: "${taskName}"`);
+}
+
+export async function addCheckin(taskName, scheduledTime) {
+  const checkins = await readJSON(CHECKINS());
+  checkins.push({
+    task: taskName,
+    scheduled_at: scheduledTime,
+    asked_at: new Date().toISOString(),
+    date: format(new Date(), 'yyyy-MM-dd'),
+  });
+  await writeJSON(CHECKINS(), checkins);
+}
+
+export async function wasAlreadyAsked(taskName, scheduledTime) {
+  const checkins = await readJSON(CHECKINS());
+  return checkins.some(c => c.task === taskName && c.scheduled_at === scheduledTime);
+}
+
+// ─── Pending question state ───────────────────────────────────────────────────
+
+/**
+ * Write a pending question so the next user message knows what context it's in.
+ * @param {string} type - e.g. "evening_review"
+ * @param {object} context - any extra data the second agent will need
+ */
+export async function setPendingQuestion(type, context = {}) {
+  await writeJSON(PENDING(), {
+    type,
+    context,
+    asked_at:   new Date().toISOString(),
+    expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+  });
+  log.info('STATE', `Pending question set — type: ${type}`);
+}
+
+/**
+ * Read and clear the pending question in one step.
+ * Returns null if none exists or if it has expired.
+ */
+export async function consumePendingQuestion() {
+  let pending;
+  try {
+    pending = JSON.parse(await readFile(PENDING(), 'utf-8'));
+  } catch {
+    return null;
+  }
+
+  if (!pending?.type) return null;
+
+  if (new Date() > new Date(pending.expires_at)) {
+    await writeJSON(PENDING(), {});
+    log.warn('STATE', `Pending question expired — type: ${pending.type}`);
+    return null;
+  }
+
+  await writeJSON(PENDING(), {});
+  log.info('STATE', `Pending question consumed — type: ${pending.type}`);
+  return pending;
+}
+
+// ─── Reviews ──────────────────────────────────────────────────────────────────
+
+export async function saveReview(reviewText) {
+  const reviews = await readJSON(REVIEWS());
+  reviews.push({
+    date:        format(new Date(), 'yyyy-MM-dd'),
+    saved_at:    new Date().toISOString(),
+    review:      reviewText,
+  });
+  await writeJSON(REVIEWS(), reviews);
+  console.log(`[History] Review saved for ${format(new Date(), 'yyyy-MM-dd')}`);
+}

@@ -8,6 +8,7 @@
  * The agent decides WHICH tools to call and WHEN. We just provide the menu.
  */
 import { readFile, writeFile, readdir } from 'fs/promises';
+import log from '../logger.js';
 import { resolve, join } from 'path';
 import { format } from 'date-fns';
 
@@ -112,6 +113,20 @@ export const TOOL_DEFINITIONS = [
       required: ['task_label'],
     },
   },
+  {
+    name: 'save_review',
+    description: 'Save the evening review text to reviews.json for permanent storage. Call this every time you complete an evening review, before or after sending it on Telegram.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        review_text: {
+          type: 'string',
+          description: 'The full review text to store — same content you send on Telegram.',
+        },
+      },
+      required: ['review_text'],
+    },
+  },
 ];
 
 // ─── Tool Handlers (what actually runs) ───────────────────────────────────────
@@ -123,7 +138,6 @@ export function setTelegramSender(fn) {
 }
 
 export async function executeTool(toolName, toolInput) {
-  console.log(`[Agent → Tool] ${toolName}`, JSON.stringify(toolInput).slice(0, 120));
 
   switch (toolName) {
 
@@ -140,6 +154,7 @@ export async function executeTool(toolName, toolInput) {
     case 'write_file': {
       const path = join(DATA_DIR, toolInput.filename);
       await writeFile(path, toolInput.content, 'utf-8');
+      log.info('FILE', `Written: ${toolInput.filename} (${toolInput.content.length} chars)`);
       return { success: true, message: `Written to ${toolInput.filename}` };
     }
 
@@ -162,12 +177,18 @@ export async function executeTool(toolName, toolInput) {
 
     case 'send_telegram': {
       if (!_telegramSend) {
-        console.warn('[Tool] Telegram sender not configured — logging message instead:');
+        log.warn('TELEGRAM', 'Sender not configured — printing to console');
         console.log(toolInput.message);
         return { success: true, note: 'Logged to console (Telegram not configured)' };
       }
-      await _telegramSend(toolInput.message, toolInput.buttons || []);
-      return { success: true, message: 'Telegram message sent' };
+      try {
+        await _telegramSend(toolInput.message, toolInput.buttons || []);
+        log.info('TELEGRAM', `Sent: "${toolInput.message.slice(0, 80)}"`);
+        return { success: true, message: 'Telegram message sent' };
+      } catch (err) {
+        log.error('TELEGRAM', 'Send failed', err);
+        throw err;
+      }
     }
 
     case 'mark_task_complete': {
@@ -187,6 +208,12 @@ export async function executeTool(toolName, toolInput) {
 
       await writeFile(histPath, JSON.stringify(history, null, 2), 'utf-8');
       return { success: true, message: `Marked complete: ${toolInput.task_label}` };
+    }
+
+    case 'save_review': {
+      const { saveReview } = await import('../history.js');
+      await saveReview(toolInput.review_text);
+      return { success: true, message: 'Review saved to reviews.json' };
     }
 
     default:
