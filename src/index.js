@@ -13,6 +13,12 @@ import { registerHandlers, registerBotCommands } from './telegram/handlers.js';
 import { registerCronJobs } from './scheduler/cron.js';
 import { startWebhookServer } from './telegram/webhook.js';
 
+function checkConfig() {
+  if (!process.env.TZ) {
+    console.warn('[LifeOS] WARNING: TZ env var not set — defaulting to UTC. Set TZ=Asia/Shanghai (or your timezone) in .env');
+  }
+}
+
 async function ensureDirs() {
   const dataDir = process.env.DATA_DIR  || resolve(process.cwd(), 'data');
   const logsDir = process.env.LOGS_DIR  || resolve(process.cwd(), 'logs');
@@ -22,6 +28,7 @@ async function ensureDirs() {
 }
 
 async function boot() {
+  checkConfig();
   await ensureDirs();
 
   console.log('');

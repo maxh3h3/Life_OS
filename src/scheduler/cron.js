@@ -13,7 +13,7 @@ import { addCheckin, wasAlreadyAsked, setPendingQuestion } from '../history.js';
 import { sendMessage } from '../telegram/bot.js';
 import log from '../logger.js';
 
-const TZ       = process.env.TIMEZONE || 'Europe/London';
+const TZ       = process.env.TZ || 'UTC';
 const DATA_DIR = process.env.DATA_DIR || resolve(process.cwd(), 'data');
 const REMINDED = () => join(DATA_DIR, 'reminders.json');
 

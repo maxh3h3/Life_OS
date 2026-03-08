@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 // DATA_DIR can be overridden by env var — used to point at Railway's
 // persistent volume (/app/data) which survives redeploys and restarts.
 const DATA_DIR = process.env.DATA_DIR || resolve(process.cwd(), 'data');
+const TZ       = process.env.TZ || 'UTC';
 
 // ─── Tool Definitions (what Claude sees) ──────────────────────────────────────
 
@@ -165,12 +166,19 @@ export async function executeTool(toolName, toolInput) {
 
     case 'get_current_datetime': {
       const now = new Date();
+      const fmt = (token) => new Intl.DateTimeFormat('en-CA', {
+        timeZone: TZ,
+        ...(token === 'date'    && { year: 'numeric', month: '2-digit', day: '2-digit' }),
+        ...(token === 'time'    && { hour: '2-digit', minute: '2-digit', hour12: false }),
+        ...(token === 'weekday' && { weekday: 'long' }),
+      }).format(now);
       return {
         success:   true,
         iso:       now.toISOString(),
-        date:      format(now, 'yyyy-MM-dd'),
-        time:      format(now, 'HH:mm'),
-        day:       format(now, 'EEEE'),
+        date:      fmt('date'),
+        time:      fmt('time').replace(',', '').trim(),
+        day:       fmt('weekday'),
+        timezone:  TZ,
         timestamp: now.getTime(),
       };
     }
