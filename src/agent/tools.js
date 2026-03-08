@@ -11,7 +11,9 @@ import { readFile, writeFile, readdir } from 'fs/promises';
 import { resolve, join } from 'path';
 import { format } from 'date-fns';
 
-const DATA_DIR = resolve(process.cwd(), 'data');
+// DATA_DIR can be overridden by env var — used to point at Railway's
+// persistent volume (/app/data) which survives redeploys and restarts.
+const DATA_DIR = process.env.DATA_DIR || resolve(process.cwd(), 'data');
 
 // ─── Tool Definitions (what Claude sees) ──────────────────────────────────────
 
