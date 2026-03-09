@@ -126,7 +126,7 @@ export function registerCronJobs() {
     console.log('[Cron] 12:00 — Midday nudge...');
     try {
       await runAgent(
-        "It's midday. Read today's plan and history.json. Check what's confirmed done vs still pending. Send Max a brief 2-3 sentence nudge on Telegram."
+        `It's midday. Read today's plan and history.json. Check what's confirmed done vs still pending. Send ${process.env.USER_NAME || 'the user'} a brief 2-3 sentence nudge on Telegram.`
       );
     } catch (err) { console.error('[Cron] Midday nudge failed:', err.message); }
   }, { timezone: TZ }));
